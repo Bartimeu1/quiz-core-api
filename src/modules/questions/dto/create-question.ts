@@ -7,13 +7,12 @@ import {
   IsArray,
   ArrayNotEmpty,
   ArrayMinSize,
-  IsNumber,
 } from 'class-validator';
 
 export class CreateQuestionDto {
   @IsNotEmpty()
-  @IsNumber()
-  id: number;
+  @IsString()
+  id: string;
 
   @IsNotEmpty()
   @IsString()

@@ -3,13 +3,12 @@ import {
   IsArray,
   ValidateNested,
   ArrayNotEmpty,
-  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class AnswerItem {
-  @IsNumber()
-  questionId: number;
+  @IsString()
+  questionId: string;
 
   @IsArray()
   @IsString({ each: true })
@@ -22,5 +21,5 @@ export class CountCorrectAnswersDto {
   @ValidateNested({ each: true })
   @Type(() => AnswerItem)
   @ArrayNotEmpty()
-  answers: { questionId: number; answer: string[] }[];
+  answers: { questionId: string; answer: string[] }[];
 }

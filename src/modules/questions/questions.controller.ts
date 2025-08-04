@@ -10,14 +10,14 @@ export class QuestionsController {
   constructor(private readonly questionsService: QuestionsService) {}
 
   @MessagePattern('get-questions')
-  async getTestQuestions(@Payload() testId: number) {
+  async getTestQuestions(@Payload() testId: string) {
     const questions = await this.questionsService.getTestQuestions(testId);
 
     return { questions };
   }
 
   @MessagePattern('get-public-questions')
-  async getPublicQuestions(@Payload() testId: number) {
+  async getPublicQuestions(@Payload() testId: string) {
     return await this.questionsService.getPublicTestQuestions(testId);
   }
 
@@ -30,7 +30,7 @@ export class QuestionsController {
   }
 
   @MessagePattern('delete-question')
-  async deleteQuestion(@Payload() id: number) {
+  async deleteQuestion(@Payload() id: string) {
     await this.questionsService.deleteQuestion(id);
   }
 

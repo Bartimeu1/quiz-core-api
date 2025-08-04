@@ -1,64 +1,70 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Question } from './entities/question.entity';
-import { TestsService } from '../tests/tests.service';
 import { CreateQuestionDto, PublicQuestionDto } from './dto';
+import { InjectModel } from '@nestjs/mongoose';
+import { Question } from '../../schemas/question.schema';
+import { Model, Types, isValidObjectId } from 'mongoose';
 
 import { plainToInstance } from 'class-transformer';
+import { RpcException } from '@nestjs/microservices';
 
 @Injectable()
 export class QuestionsService {
   constructor(
-    @InjectRepository(Question)
-    private questionRepository: Repository<Question>,
-    private testsService: TestsService,
+    @InjectModel(Question.name) private questionModel: Model<Question>,
   ) {}
 
   async createQuestion(createQuestionDto: CreateQuestionDto) {
     const { id, ...questionData } = createQuestionDto;
 
-    const test = await this.testsService.getTestById(id);
-    const question = this.questionRepository.create({ ...questionData, test });
+    const question = new this.questionModel({
+      ...questionData,
+      test: new Types.ObjectId(id),
+    });
 
-    return await this.questionRepository.save(question);
+    return question.save();
   }
 
-  async getTestQuestions(testId: number): Promise<Question[]> {
-    const test = await this.testsService.getTestById(testId);
-
-    return await this.questionRepository.find({ where: { test } });
+  async getTestQuestions(testId: string): Promise<Question[]> {
+    return this.questionModel.find({ test: new Types.ObjectId(testId) }).exec();
   }
 
-  async getPublicTestQuestions(testId: number): Promise<PublicQuestionDto[]> {
+  async getPublicTestQuestions(testId: string): Promise<PublicQuestionDto[]> {
     const questions = await this.getTestQuestions(testId);
+    const plainQuestions = questions.map((doc) => doc.toJSON());
 
-    return plainToInstance(PublicQuestionDto, questions);
+    return plainToInstance(PublicQuestionDto, plainQuestions);
   }
 
-  async deleteQuestion(id: number) {
-    await this.questionRepository.delete({ id });
+  async deleteQuestion(id: string) {
+    if (!isValidObjectId(id)) {
+      throw new RpcException(
+        new BadRequestException(`Invalid MongoDB ObjectId: ${id}`),
+      );
+    }
+
+    await this.questionModel.findByIdAndDelete(id).exec();
   }
 
-  async deleteQuestionsByTestId(testId: number) {
-    const test = await this.testsService.getTestById(testId);
-    await this.questionRepository.delete({ test });
+  async deleteQuestionsByTestId(testId: string) {
+    await this.questionModel
+      .deleteMany({ test: new Types.ObjectId(testId) })
+      .exec();
   }
 
   async countCorrectAnswers(
-    answers: { questionId: number; answer: string[] }[],
+    answers: { questionId: string; answer: string[] }[],
   ) {
     const results = await Promise.all(
       answers.map(({ questionId: id, answer }) => this.checkAnswer(id, answer)),
     );
-
     const correctAnswers = results.filter((result) => result).length;
+
     return correctAnswers;
   }
 
-  async checkAnswer(id: number, answer: string[]): Promise<boolean> {
-    const question = await this.questionRepository.findOneBy({ id });
+  async checkAnswer(id: string, answer: string[]): Promise<boolean> {
+    const question = await this.questionModel.findById(id).exec();
     const correctAnswer = question?.correctAnswers;
 
     if (!correctAnswer) {

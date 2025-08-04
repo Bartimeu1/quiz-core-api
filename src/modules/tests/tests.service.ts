@@ -1,22 +1,20 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateTestDto } from './dto';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Test } from './entities/test.entity';
 import { RpcException } from '@nestjs/microservices';
+import { InjectModel } from '@nestjs/mongoose';
+import { Test } from '../../schemas/test.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class TestsService {
-  constructor(
-    @InjectRepository(Test) private testRepository: Repository<Test>,
-  ) {}
+  constructor(@InjectModel(Test.name) private testModel: Model<Test>) {}
 
   async getAllTests(): Promise<Test[]> {
-    return this.testRepository.find();
+    return this.testModel.find().exec();
   }
 
   async getTestById(id: number): Promise<Test> {
-    const test = await this.testRepository.findOneBy({ id });
+    const test = await this.testModel.findById(String(id)).exec();
 
     if (!test) {
       throw new RpcException(
@@ -28,12 +26,12 @@ export class TestsService {
   }
 
   async createTest(createTestDto: CreateTestDto) {
-    const test = this.testRepository.create(createTestDto);
+    const createdTest = new this.testModel(createTestDto);
 
-    return await this.testRepository.save(test);
+    return createdTest.save();
   }
 
   async deleteTest(id: number) {
-    await this.testRepository.delete({ id });
+    await this.testModel.findByIdAndDelete(id).exec();
   }
 }

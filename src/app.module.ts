@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { KafkaClientModule } from './modules/kafka-client/kafka-client.module';
 import { TestsModule } from './modules/tests/tests.module';
 import { QuestionsModule } from './modules/questions/questions.module';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
   imports: [
@@ -11,18 +11,16 @@ import { QuestionsModule } from './modules/questions/questions.module';
     QuestionsModule,
     KafkaClientModule,
     ConfigModule.forRoot({ isGlobal: true }),
-    TypeOrmModule.forRootAsync({
+    MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get('POSTGRES_HOST'),
-        port: configService.get('POSTGRES_PORT'),
-        username: configService.get('POSTGRES_USERNAME'),
-        password: configService.get('POSTGRES_PASSWORD'),
-        database: configService.get('POSTGRES_NAME'),
-        synchronize: true,
-        entities: [__dirname + '/**/*.entity.{ts,js}'],
+        uri: configService.get<string>('MONGO_URI'),
+        dbName: configService.get<string>('MONGO_DATABASE'),
+        auth: {
+          username: configService.get<string>('MONGO_USERNAME'),
+          password: configService.get<string>('MONGO_PASSWORD'),
+        },
       }),
     }),
   ],

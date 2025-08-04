@@ -1,5 +1,5 @@
 export class PublicQuestionDto {
-  id: number;
+  id: string;
   title: string;
   multiSelect: boolean;
   options: string[];
